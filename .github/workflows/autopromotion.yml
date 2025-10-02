@@ -1,0 +1,64 @@
+name: Auto Promotion Branches
+
+on:
+  push:
+    paths-ignore:
+      - .github/workflows/autopromotion.yml  # optional safety to avoid triggering itself
+
+jobs:
+  promote-branches:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.AUTOPROMOTION_PAT }} # Replace with your PAT secret
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "Autopromotion Bot"
+          git config --global user.email "bot@example.com"
+
+      - name: Promote dev → rudev
+        run: |
+          git fetch origin
+          if [ $(git rev-list origin/rudev..origin/dev --count) -gt 0 ]; then
+            echo "Merging dev → rudev..."
+            git checkout rudev
+            git merge origin/dev --no-edit || { echo "Conflict detected"; exit 1; }
+
+            # Delete unwanted YAMLs after merge
+            rm -f .github/workflows/autopromotion.yml
+            rm -f .github/workflows/dev.yml
+
+            # Commit deletions if any
+            git add .github/workflows/
+            git commit -m "Remove unwanted YAMLs after dev → rudev merge" || echo "No changes to commit"
+            git push origin rudev
+          else
+            echo "No updates from dev → rudev"
+          fi
+
+      - name: Promote rudev → rutest
+        run: |
+          git fetch origin
+          if [ $(git rev-list origin/rutest..origin/rudev --count) -gt 0 ]; then
+            echo "Merging rudev → rutest..."
+            git checkout rutest
+            git merge origin/rudev --no-edit || { echo "Conflict detected"; exit 1; }
+
+            # Delete unwanted YAMLs after merge
+            rm -f .github/workflows/rudev.yml
+
+            git add .github/workflows/
+            git commit -m "Remove unwanted YAMLs after rudev → rutest merge" || echo "No changes to commit"
+            git push origin rutest
+          else
+            echo "No updates from rudev → rutest"
+          fi
+
+    
