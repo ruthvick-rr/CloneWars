@@ -53,6 +53,7 @@ jobs:
 
             # Delete unwanted YAMLs after merge
             rm -f .github/workflows/rudev.yml
+            rm -f .github/workflows/rudev.yml
 
             git add .github/workflows/
             git commit -m "Remove unwanted YAMLs after rudev → rutest merge" || echo "No changes to commit"
