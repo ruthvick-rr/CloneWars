@@ -1,9 +1,11 @@
 name: Auto Promotion Branches
 
 on:
-  push:
-    paths-ignore:
-      - .github/workflows/autopromotion.yml  # optional safety to avoid triggering itself
+  push:   # you can switch back to schedule/dispatch later
+    branches:
+      - dev
+      - rudev
+      - rutest
 
 jobs:
   promote-branches:
@@ -12,54 +14,56 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.AUTOPROMOTION_PAT }} # Replace with your PAT secret
+          fetch-depth: 0 # full history for merges
 
       - name: Set up Git
         run: |
-          git config --global user.name "Autopromotion Bot"
-          git config --global user.email "bot@example.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      # -------------------------
+      # Merge dev → rudev
+      # -------------------------
       - name: Promote dev → rudev
         run: |
           git fetch origin
           if [ $(git rev-list origin/rudev..origin/dev --count) -gt 0 ]; then
             echo "Merging dev → rudev..."
             git checkout rudev
-            git merge origin/dev --no-edit || { echo "Conflict detected"; exit 1; }
+            git merge origin/dev --no-edit -X theirs || { echo "Conflict detected"; exit 1; }
 
-            # Delete unwanted YAMLs after merge
+            # Cleanup unwanted files
             rm -f .github/workflows/autopromotion.yml
             rm -f .github/workflows/dev.yml
 
-            # Commit deletions if any
-            git add .github/workflows/
-            git commit -m "Remove unwanted YAMLs after dev → rudev merge" || echo "No changes to commit"
+            git add .github/workflows/ || true
+            git commit -m "Cleanup after dev → rudev merge" || echo "No changes to commit"
             git push origin rudev
           else
             echo "No updates from dev → rudev"
           fi
 
+      # -------------------------
+      # Merge rudev → rutest
+      # -------------------------
       - name: Promote rudev → rutest
         run: |
           git fetch origin
           if [ $(git rev-list origin/rutest..origin/rudev --count) -gt 0 ]; then
             echo "Merging rudev → rutest..."
             git checkout rutest
-            git merge origin/rudev --no-edit || { echo "Conflict detected"; exit 1; }
+            git merge origin/rudev --no-edit -X theirs || { echo "Conflict detected"; exit 1; }
 
-            # Delete unwanted YAMLs after merge
-            rm -f .github/workflows/rudev.yml
+            # Cleanup unwanted files
+            rm -f .github/workflows/autopromotion.yml
             rm -f .github/workflows/rudev.yml
 
-            git add .github/workflows/
-            git commit -m "Remove unwanted YAMLs after rudev → rutest merge" || echo "No changes to commit"
+            git add .github/workflows/ || true
+            git commit -m "Cleanup after rudev → rutest merge" || echo "No changes to commit"
             git push origin rutest
           else
             echo "No updates from rudev → rutest"
           fi
-
-    
