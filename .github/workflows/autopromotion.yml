@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # full history for merges
+          token: ${{ secrets.AUTOPROMOTION_PAT }} # Replace with your PAT secret
         
 
       - name: Set up Git
@@ -34,13 +35,13 @@ jobs:
           if [ $(git rev-list origin/rudev..origin/dev --count) -gt 0 ]; then
             echo "Merging dev → rudev..."
             git checkout rudev
-            git merge origin/dev --no-edit -X theirs || { echo "Conflict detected"; exit 1; }
+            git merge origin/dev --no-edit || { echo "Conflict detected"; exit 1; }
 
-            # Cleanup unwanted files
-            rm -f .github/workflows/autopromotion.yml
-            rm -f .github/workflows/dev.yml
+            # # Cleanup unwanted files
+            # rm -f .github/workflows/autopromotion.yml
+            # rm -f .github/workflows/dev.yml
 
-            git add .github/workflows/ || true
+            # git add .github/workflows/ || true
             git commit -m "Cleanup after dev → rudev merge" || echo "No changes to commit"
             git push origin rudev
           else
@@ -56,13 +57,13 @@ jobs:
           if [ $(git rev-list origin/rutest..origin/rudev --count) -gt 0 ]; then
             echo "Merging rudev → rutest..."
             git checkout rutest
-            git merge origin/rudev --no-edit -X theirs || { echo "Conflict detected"; exit 1; }
+            git merge origin/rudev --no-edit || { echo "Conflict detected"; exit 1; }
 
-            # Cleanup unwanted files
-            rm -f .github/workflows/autopromotion.yml
-            rm -f .github/workflows/rudev.yml
+            # # Cleanup unwanted files
+            # rm -f .github/workflows/autopromotion.yml
+            # rm -f .github/workflows/rudev.yml
 
-            git add .github/workflows/ || true
+            # git add .github/workflows/ || true
             git commit -m "Cleanup after rudev → rutest merge" || echo "No changes to commit"
             git push origin rutest
           else
